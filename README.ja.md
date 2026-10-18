@@ -1,4 +1,4 @@
-﻿# DramaForge — AI ショートドラマ自動生成プラットフォーム
+# DramaForge — AI ショートドラマ自動生成プラットフォーム
 
 [English](README.md) · [中文](README.zh.md) · **日本語**
 
