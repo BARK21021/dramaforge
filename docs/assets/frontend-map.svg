@@ -1,73 +1,73 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="800" viewBox="0 0 1240 800" font-family='"Microsoft YaHei","PingFang SC","Noto Sans CJK SC","Source Han Sans SC",sans-serif'>
-<title>DramaForge 前端地图</title>
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="800" viewBox="0 0 1240 800" font-family='"Segoe UI","Helvetica Neue",Helvetica,Arial,sans-serif'>
+<title>DramaForge frontend map</title>
 <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#9ca3af"/></marker></defs>
 <rect width="1240" height="800" fill="#ffffff"/>
-<text x="40" y="48" font-size="24" font-weight="700" fill="#111827" text-anchor="start">前端页面与组件地图（packages/web）</text>
-<text x="40" y="76" font-size="13" font-weight="400" fill="#6b7280" text-anchor="start">Next.js App Router。工作区是唯一带阶段导航的页面，其余是库与设置类页面。</text>
-<text x="40" y="118" font-size="12.5" font-weight="700" fill="#2563eb" text-anchor="start">路由（app/）</text>
+<text x="40" y="48" font-size="23" font-weight="700" fill="#111827" text-anchor="start">Frontend routes and component map (packages/web)</text>
+<text x="40" y="76" font-size="12.5" font-weight="400" fill="#6b7280" text-anchor="start">Next.js App Router. The workspace is the only page with stage navigation; everything else is a library or settings page.</text>
+<text x="40" y="118" font-size="12.5" font-weight="700" fill="#2563eb" text-anchor="start">Routes (app/)</text>
 <rect x="40" y="132" width="372" height="46" rx="8" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1"/>
 <text x="56" y="152" font-size="12" font-weight="700" fill="#2563eb" text-anchor="start">workspace/[projectId]</text>
-<text x="56" y="168" font-size="10.5" font-weight="400" fill="#6b7280" text-anchor="start">核心：五阶段工作台</text>
+<text x="56" y="168" font-size="10.5" font-weight="400" fill="#6b7280" text-anchor="start">the five-stage workspace</text>
 <rect x="40" y="190" width="372" height="46" rx="8" fill="#f9fafb" stroke="#e5e7eb" stroke-width="1"/>
 <text x="56" y="210" font-size="12" font-weight="700" fill="#111827" text-anchor="start">films</text>
-<text x="56" y="226" font-size="10.5" font-weight="400" fill="#6b7280" text-anchor="start">成片库</text>
+<text x="56" y="226" font-size="10.5" font-weight="400" fill="#6b7280" text-anchor="start">finished cuts</text>
 <rect x="40" y="248" width="372" height="46" rx="8" fill="#f9fafb" stroke="#e5e7eb" stroke-width="1"/>
 <text x="56" y="268" font-size="12" font-weight="700" fill="#111827" text-anchor="start">groups</text>
-<text x="56" y="284" font-size="10.5" font-weight="400" fill="#6b7280" text-anchor="start">镜头分组库</text>
+<text x="56" y="284" font-size="10.5" font-weight="400" fill="#6b7280" text-anchor="start">shot group library</text>
 <rect x="40" y="306" width="372" height="46" rx="8" fill="#f9fafb" stroke="#e5e7eb" stroke-width="1"/>
 <text x="56" y="326" font-size="12" font-weight="700" fill="#111827" text-anchor="start">compile</text>
-<text x="56" y="342" font-size="10.5" font-weight="400" fill="#6b7280" text-anchor="start">合成与导出</text>
+<text x="56" y="342" font-size="10.5" font-weight="400" fill="#6b7280" text-anchor="start">compose and export</text>
 <rect x="40" y="364" width="372" height="46" rx="8" fill="#f9fafb" stroke="#e5e7eb" stroke-width="1"/>
 <text x="56" y="384" font-size="12" font-weight="700" fill="#111827" text-anchor="start">generate</text>
-<text x="56" y="400" font-size="10.5" font-weight="400" fill="#6b7280" text-anchor="start">批量生成</text>
+<text x="56" y="400" font-size="10.5" font-weight="400" fill="#6b7280" text-anchor="start">batch generation</text>
 <rect x="40" y="422" width="372" height="46" rx="8" fill="#f9fafb" stroke="#e5e7eb" stroke-width="1"/>
 <text x="56" y="442" font-size="12" font-weight="700" fill="#111827" text-anchor="start">settings</text>
-<text x="56" y="458" font-size="10.5" font-weight="400" fill="#6b7280" text-anchor="start">账号与偏好</text>
+<text x="56" y="458" font-size="10.5" font-weight="400" fill="#6b7280" text-anchor="start">account and preferences</text>
 <rect x="40" y="480" width="372" height="46" rx="8" fill="#f9fafb" stroke="#e5e7eb" stroke-width="1"/>
 <text x="56" y="500" font-size="12" font-weight="700" fill="#111827" text-anchor="start">admin</text>
-<text x="56" y="516" font-size="10.5" font-weight="400" fill="#6b7280" text-anchor="start">后台：key 池 / 用户</text>
+<text x="56" y="516" font-size="10.5" font-weight="400" fill="#6b7280" text-anchor="start">back office: key pool / users</text>
 <rect x="40" y="538" width="372" height="46" rx="8" fill="#f9fafb" stroke="#e5e7eb" stroke-width="1"/>
 <text x="56" y="558" font-size="12" font-weight="700" fill="#111827" text-anchor="start">auth · payment · download</text>
-<text x="56" y="574" font-size="10.5" font-weight="400" fill="#6b7280" text-anchor="start">登录 / 充值 / 客户端下载</text>
+<text x="56" y="574" font-size="10.5" font-weight="400" fill="#6b7280" text-anchor="start">sign-in / top-up / client download</text>
 <rect x="436" y="108" width="776" height="492" rx="12" fill="#f8fbff" stroke="#dbeafe" stroke-width="1"/>
-<text x="454" y="132" font-size="12.5" font-weight="700" fill="#2563eb" text-anchor="start">workspace/[projectId] 内部：五个阶段各一个组件</text>
+<text x="454" y="132" font-size="12.5" font-weight="700" fill="#2563eb" text-anchor="start">inside workspace/[projectId] — one component per stage</text>
 <rect x="452" y="146" width="744" height="80" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
 <rect x="452" y="146" width="5" height="80" rx="2" fill="#2563eb" stroke="#2563eb" stroke-width="1"/>
-<text x="474" y="172" font-size="13.5" font-weight="700" fill="#111827" text-anchor="start">输入</text>
+<text x="474" y="172" font-size="13.5" font-weight="700" fill="#111827" text-anchor="start">Input</text>
 <text x="474" y="194" font-size="11.5" font-weight="400" fill="#2563eb" text-anchor="start">InputStage.tsx</text>
-<text x="474" y="214" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">导入剧本 / 参考视频拆解（ReferenceVideoStage）</text>
+<text x="474" y="214" font-size="10.5" font-weight="400" fill="#6b7280" text-anchor="start">import a script / decompose a reference video (ReferenceVideoStage)</text>
 <rect x="452" y="236" width="744" height="80" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
 <rect x="452" y="236" width="5" height="80" rx="2" fill="#2563eb" stroke="#2563eb" stroke-width="1"/>
-<text x="474" y="262" font-size="13.5" font-weight="700" fill="#111827" text-anchor="start">编剧分析</text>
+<text x="474" y="262" font-size="13.5" font-weight="700" fill="#111827" text-anchor="start">Analysis</text>
 <text x="474" y="284" font-size="11.5" font-weight="400" fill="#2563eb" text-anchor="start">AnalyzingStage.tsx</text>
-<text x="474" y="304" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">原文改写对照（OriginalRewriteStage）→ 场景与角色抽取</text>
+<text x="474" y="304" font-size="10.5" font-weight="400" fill="#6b7280" text-anchor="start">rewrite diff against the original (OriginalRewriteStage) → scenes and cast</text>
 <rect x="452" y="326" width="744" height="80" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
 <rect x="452" y="326" width="5" height="80" rx="2" fill="#2563eb" stroke="#2563eb" stroke-width="1"/>
-<text x="474" y="352" font-size="13.5" font-weight="700" fill="#111827" text-anchor="start">资产设定</text>
+<text x="474" y="352" font-size="13.5" font-weight="700" fill="#111827" text-anchor="start">Casting</text>
 <text x="474" y="374" font-size="11.5" font-weight="400" fill="#2563eb" text-anchor="start">AssetDesignStage.tsx</text>
-<text x="474" y="394" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">资产母版（AssetMasterPanel）+ 定妆图与修订</text>
+<text x="474" y="394" font-size="10.5" font-weight="400" fill="#6b7280" text-anchor="start">asset master (AssetMasterPanel) + design stills and revisions</text>
 <rect x="452" y="416" width="744" height="80" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
 <rect x="452" y="416" width="5" height="80" rx="2" fill="#2563eb" stroke="#2563eb" stroke-width="1"/>
-<text x="474" y="442" font-size="13.5" font-weight="700" fill="#111827" text-anchor="start">分镜设计</text>
+<text x="474" y="442" font-size="13.5" font-weight="700" fill="#111827" text-anchor="start">Storyboard</text>
 <text x="474" y="464" font-size="11.5" font-weight="400" fill="#2563eb" text-anchor="start">StoryboardStage.tsx</text>
-<text x="474" y="484" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">镜头表、引用徽章、版本历史（StoryboardVersionHistory）</text>
+<text x="474" y="484" font-size="10.5" font-weight="400" fill="#6b7280" text-anchor="start">shot table, reference badges, version history (StoryboardVersionHistory)</text>
 <rect x="452" y="506" width="744" height="80" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
 <rect x="452" y="506" width="5" height="80" rx="2" fill="#2563eb" stroke="#2563eb" stroke-width="1"/>
-<text x="474" y="532" font-size="13.5" font-weight="700" fill="#111827" text-anchor="start">生产制作</text>
+<text x="474" y="532" font-size="13.5" font-weight="700" fill="#111827" text-anchor="start">Production</text>
 <text x="474" y="554" font-size="11.5" font-weight="400" fill="#2563eb" text-anchor="start">ProductionStage.tsx</text>
-<text x="474" y="574" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">逐镜生成、选片、时间线（VideoEditor / VideoPlayer）</text>
-<text x="40" y="624" font-size="12.5" font-weight="700" fill="#2563eb" text-anchor="start">页面共用的状态中枢（上述五个阶段都依赖它）</text>
+<text x="474" y="574" font-size="10.5" font-weight="400" fill="#6b7280" text-anchor="start">per-shot generation, picking, timeline (VideoEditor / VideoPlayer)</text>
+<text x="40" y="624" font-size="12.5" font-weight="700" fill="#2563eb" text-anchor="start">Shared state (all five stages depend on it)</text>
 <rect x="40" y="640" width="380" height="92" rx="8" fill="#f9fafb" stroke="#e5e7eb" stroke-width="1"/>
 <text x="54" y="664" font-size="12" font-weight="700" fill="#111827" text-anchor="start">stage-config.ts</text>
-<text x="54" y="688" font-size="10.5" font-weight="400" fill="#6b7280" text-anchor="start">五阶段定义与顺序；</text>
-<text x="54" y="705" font-size="10.5" font-weight="400" fill="#6b7280" text-anchor="start">由 episode 状态推导初始阶段</text>
+<text x="54" y="688" font-size="10.5" font-weight="400" fill="#6b7280" text-anchor="start">stage definitions and order;</text>
+<text x="54" y="705" font-size="10.5" font-weight="400" fill="#6b7280" text-anchor="start">initial stage derived from episode state</text>
 <rect x="436" y="640" width="380" height="92" rx="8" fill="#f9fafb" stroke="#e5e7eb" stroke-width="1"/>
 <text x="450" y="664" font-size="12" font-weight="700" fill="#111827" text-anchor="start">StageNav.tsx</text>
-<text x="450" y="688" font-size="10.5" font-weight="400" fill="#6b7280" text-anchor="start">阶段导航条；只切换视图，</text>
-<text x="450" y="705" font-size="10.5" font-weight="400" fill="#6b7280" text-anchor="start">不触发任何请求</text>
+<text x="450" y="688" font-size="10.5" font-weight="400" fill="#6b7280" text-anchor="start">stage navigation bar; switches the view</text>
+<text x="450" y="705" font-size="10.5" font-weight="400" fill="#6b7280" text-anchor="start">only, never triggers a request</text>
 <rect x="832" y="640" width="380" height="92" rx="8" fill="#f9fafb" stroke="#e5e7eb" stroke-width="1"/>
 <text x="846" y="664" font-size="12" font-weight="700" fill="#111827" text-anchor="start">EpisodeWorkspace.tsx</text>
-<text x="846" y="688" font-size="10.5" font-weight="400" fill="#6b7280" text-anchor="start">分集容器：轮询任务状态，</text>
-<text x="846" y="705" font-size="10.5" font-weight="400" fill="#6b7280" text-anchor="start">把阶段与剧集绑在一起</text>
-<text x="40" y="776" font-size="10.5" font-weight="400" fill="#9ca3af" text-anchor="start">组件按阶段一文件命名，文件名即阶段 key，方便从 URL 直接定位代码。</text>
+<text x="846" y="688" font-size="10.5" font-weight="400" fill="#6b7280" text-anchor="start">episode container: polls task state,</text>
+<text x="846" y="705" font-size="10.5" font-weight="400" fill="#6b7280" text-anchor="start">binds the stages to the episode</text>
+<text x="40" y="776" font-size="10.5" font-weight="400" fill="#9ca3af" text-anchor="start">One component file per stage; the file name is the stage key, so a URL maps straight to the code.</text>
 </svg>

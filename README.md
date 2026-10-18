@@ -1,96 +1,96 @@
-# DramaForge — AI 短剧自动生成平台
+# DramaForge — AI Short-Drama Generation Platform
 
-**中文** · [English](README.en.md) · [日本語](README.ja.md)
+**English** · [中文](README.zh.md) · [日本語](README.ja.md)
 
-把一段小说或剧本变成可分镜、可出图、可生成视频、可配音的短剧成片。服务端负责提示词组装、任务编排、计费与多供应商接入；媒体渲染放在 Electron 客户端本地完成，服务器不存媒体字节。
+Turn a novel or a script into a finished short drama: broken into shots, illustrated, animated, and voiced. The server handles prompt assembly, task orchestration, billing and multi-vendor access; media rendering happens locally in an Electron client, and the server never stores a single media byte.
 
-> 本仓库为**脱敏后的源码公开版**：真实主机、域名、SSH 密钥名已替换为占位符，生产凭证一律不含。原仓库 291 次提交的历史未导出，此处为单次快照。
+> This repository is a **sanitized public source snapshot**: real hosts, domains and SSH key names have been replaced with placeholders, and no production credentials are included. The original 291-commit history was not exported — this is a single snapshot.
 
-## 它解决什么问题
+## What it solves
 
-真人短剧一季 35 集、上千个镜头。手工做不可行；纯脚本拼接又出不来能播的片子。这个平台把中间那段工程化了——下面四件事不做就交不了片：
+A live-action short-drama season is 35 episodes and well over a thousand shots. Hand-crafting it is not viable, and gluing a few scripts together does not produce anything watchable. This platform engineers the middle of that pipeline — four things that have to be solved or there is no deliverable:
 
-| 卡点 | 不这么做的后果 | 这里的做法 |
+| Bottleneck | What happens without it | How it is handled here |
 |---|---|---|
-| **上千个镜头的状态会乱** | 哪个镜头的提示词改过、哪一集重跑过，Excel 和聊天记录都记不住；改动一次就得全推倒重来 | 五个阶段各自落一张表，每阶段只读上一阶段的产物；任何一步都能单独重跑，不牵连其它 |
-| **人物跨镜头会变脸** | 同一个人在第 1 集和第 30 集是两张脸，观众一眼出戏 | 资产定妆：一张参考图锁一个人；改图生成新修订而非覆盖；镜头引用资产 ID，不靠人物名字去猜 |
-| **视频模型不稳定** | 几百个任务里一个限流就整批失败，算力和等待成本全落在客户端 | key 池轮转 + 失败冷却 + 任务租约心跳 + 断点续跑；卡死判定不看心跳、只看 claim 硬上限 |
-| **客户素材不能上云** | 私有原片存服务器，存储成本、出站流量与合规风险一起涨 | 薄服务端：服务器只持 AI key 与数据库元数据，媒体字节全在客户本地磁盘 |
+| **State across a thousand shots** | Nobody remembers which shot's prompt changed or which episode was re-run; one edit forces a full restart | Five stages, each persisting to its own table and reading only the previous stage's output; any step can be re-run in isolation |
+| **Characters drift across shots** | The same person has two different faces in episode 1 and episode 30, and the audience notices immediately | Casting lock: one reference image pins one character; re-rolls create a new revision instead of overwriting; shots reference asset IDs, not names |
+| **Video models are unstable** | One rate limit among hundreds of tasks fails the whole batch, with the compute and the waiting on the client | Key pool rotation, failure cooldown, task lease + heartbeat, resumable runs; liveness is judged by a hard claim ceiling, not by the heartbeat |
+| **Client footage cannot go to the cloud** | Private source media on the server drives storage cost, egress and compliance risk up together | Thin server: the server holds only AI keys and database metadata; every media byte stays on the client's disk |
 
-换来的结果：一条 35 集、1246 个镜头、71 个资产的短剧，从输入原文到导出成片是一条可重复执行的流水线，而不是一次性的手工赶工。
+The result: a 35-episode, 1,246-shot, 71-asset drama goes from raw text to a finished cut as a repeatable pipeline instead of a one-off manual sprint.
 
-![DramaForge 业务流程](docs/assets/business-flow.svg)
+![DramaForge business flow](docs/assets/business-flow.svg)
 
 ---
 
-## 业务流程
+## Business flow
 
-整个产品是一条五阶段流水线。每个阶段只做一件事，产出落进一张表，下一阶段从表里读——所以任何一步都可以停下来改、改完接着跑，不用从头再来。
+The whole product is a five-stage pipeline. Each stage does exactly one thing and writes its result into one table; the next stage reads from that table. Any step can therefore be paused, edited and resumed without starting over.
 
-| 阶段 | 界面做什么 | 落库 |
+| Stage | What the UI does | What it writes |
 |---|---|---|
-| **1 输入** | 导入小说或剧本原文；或者丢一段参考视频进去，让系统先拆出人物、场景与镜头结构再开始 | `projects.novelText`、`projects.artStyle`、`projects.artStylePrompt` |
-| **2 编剧分析** | 按分集切分并抽取场景与角色，同时给出情绪弧线；改写稿与原作并排对照，逐段确认没有被改歪 | `episodes.scenes[]`（`scene_id`/`characters[]`/`visual_style`）、`episodes.emotionArc` |
-| **3 资产设定** | 角色、道具、场景三类资产逐个定妆，一张参考图锁一个人；改图会生成新修订，旧图不丢 | `assets`（`kind` = `CHARACTER`/`PROP`/`LOCATION`）、`asset_image_revisions` |
-| **4 分镜设计** | 每个镜头一行：时长、提示词、目的标签、情绪弧线位置、蒙太奇类型、音频类型，以及引用了哪些资产 | `shots`（`referencedAssets`、`purposeTag`、`aspectRatio` 默认 9:16） |
-| **5 生产制作** | 逐镜生成候选素材 → 选片 → 合成 → 导出成片。整组渲染是长任务，中途可以关页面 | `tasks`、`tasks_events`、`materials`、`render_jobs` |
+| **1 Input** | Import the novel or script text; or drop in a reference video and let the system first extract characters, sets and shot structure | `projects.novelText`, `projects.artStyle`, `projects.artStylePrompt` |
+| **2 Script analysis** | Split into episodes, extract scenes and characters, derive an emotion arc; show the rewrite side by side with the source for paragraph-level review | `episodes.scenes[]` (`scene_id`/`characters[]`/`visual_style`), `episodes.emotionArc` |
+| **3 Asset design** | Lock the look of every character, prop and location — one reference image per person; regenerating keeps a new revision and never drops the old one | `assets` (`kind` = `CHARACTER`/`PROP`/`LOCATION`), `asset_image_revisions` |
+| **4 Storyboard** | One row per shot: duration, prompt, purpose tag, position on the emotion arc, montage type, audio type, and which assets it references | `shots` (`referencedAssets`, `purposeTag`, `aspectRatio` defaulting to 9:16) |
+| **5 Production** | Generate candidate material shot by shot → pick takes → composite → export. Batch rendering is a long job that survives closing the page | `tasks`, `tasks_events`, `materials`, `render_jobs` |
 
-流程之外还有三个库，用的是同一份数据：**成片库**（跨项目的成品集合）、**镜头组库**（整组已生成成功的镜头组，按项目 → 分集归拢）、**素材库**（客户端的本地视频/图片/音频）。
+Three libraries sit on top of the same data: the **film library** (finished outputs across projects), the **shot-group library** (shot groups that rendered end to end, grouped by project → episode), and the **media library** (video/image/audio kept on the client).
 
-### 数据对象
+### Data objects
 
-| 表 | 存什么 |
+| Table | Contents |
 |---|---|
-| `projects` | 项目级信息：原文、剧本 JSON、画风锁定、版本号（乐观锁） |
-| `episodes` | 分集：正文、字数、状态、`scenes[]`、情绪弧线、默认视觉风格 |
-| `assets` | 资产：类型、名称、描述、参考图、元数据、版本 |
-| `shots` | 镜头：序号、时长、提示词、目的/情绪位/蒙太奇、引用资产、当前选中素材、生成状态 |
-| `materials` | 一次生成产出的候选素材，供选片 |
-| `tasks` / `tasks_events` | 异步任务与其进度事件（text / image / video / voice 四条队列） |
-| `render_jobs` | 渲染任务，带租约与心跳 |
-| `billing_ledger` | 计费流水：元 → 积分（加价 20%，向上取整，最小 1 积分） |
-| `api_configs` | 平台侧 key 池，按模型分组轮转 |
+| `projects` | Project level: source text, script JSON, locked art style, version (optimistic lock) |
+| `episodes` | Episodes: body text, word count, status, `scenes[]`, emotion arc, default visual style |
+| `assets` | Assets: kind, name, description, reference image, metadata, version |
+| `shots` | Shots: sequence, duration, prompt, purpose/emotion/montage, referenced assets, selected material, generation status |
+| `materials` | Candidate outputs of one generation run, for take selection |
+| `tasks` / `tasks_events` | Async tasks and their progress events (text / image / video / voice queues) |
+| `render_jobs` | Render jobs, with lease and heartbeat |
+| `billing_ledger` | Billing ledger: yuan → credits (20% markup, round up, minimum 1 credit) |
+| `api_configs` | Platform key pool, rotated per model group |
 
-### 四条贯穿全流程的硬规则
+### Four rules that hold across the whole pipeline
 
-1. **一个镜头组引用的人物 ≤ 4。** 火山 Seedance 官方建议参考人物超过 4 个时保脸稳定性下降、容易出双胞胎；超了直接 400 拦下，不靠事后挑图。
-2. **敏感词只在一处映射，三条链路同时生效。** 资产生图、场景站位图、视频生成共用一个 `sanitizePromptForModeration()`；视频链路在大模型改写之后还有一次幂等兜底，防止禁词被改回原文。
-3. **key 池 + 并发闸门。** 全局并发之外按用户放行；单个 key 失败进冷却、请求换 key 继续，队列里等待而不是打爆上游。
-4. **渲染任务靠租约 + 心跳，但心跳不能当存活证明。** 心跳每 30 秒续租，`reapStale` 回收超时的；可卡死的任务心跳照样新鲜，所以另加一条不看心跳的 claim 硬上限。
+1. **A shot group may reference at most 4 characters.** Volcano's Seedance docs note that identity stability drops above four reference people and twin/multi-subject artifacts appear; exceeding it is rejected with a 400 up front rather than fixed by re-rolling.
+2. **Sensitive terms are mapped in exactly one place and take effect on all three paths.** Asset images, scene blocking images and video generation share one `sanitizePromptForModeration()`; the video path runs an additional idempotent pass after the LLM rewrite, so a term cannot sneak back in.
+3. **Key pool plus a concurrency gate.** Beyond the global limit, users get their own allowance; a failing key enters cooldown and the request moves to another key instead of hammering the upstream.
+4. **Render jobs use lease + heartbeat — but a heartbeat is not proof of liveness.** Heartbeats renew every 30 seconds and `reapStale` collects the expired; a wedged job still looks "freshly heartbeating", so there is also a claim ceiling that ignores heartbeats.
 
 ---
 
-## 架构
+## Architecture
 
-![薄服务端 / 厚客户端](docs/assets/cs-architecture.svg)
+![Thin server / thick client](docs/assets/cs-architecture.svg)
 
-**薄服务端、厚客户端**：服务器只持有 AI key 与数据库元数据，渲染所需素材和成品都在用户本地磁盘。这样一台 1.8 GB 内存的单机就能跑起整套服务。
+**Thin server, thick client**: the server holds only AI keys and database metadata; every asset and every finished file lives on the user's disk. That is what lets a single 1.8 GB machine run the entire service.
 
-## 前端结构
+## Frontend structure
 
-![前端页面与组件地图](docs/assets/frontend-map.svg)
+![Frontend page and component map](docs/assets/frontend-map.svg)
 
-| 路由 | 是什么 |
+| Route | What it is |
 |---|---|
-| `/workspace/[projectId]` | 主工作台。五阶段各一个组件，`stage-config.ts` 定义顺序，由分集状态推导进入哪个阶段 |
-| `/films` | 成片库：跨项目的成品集合 |
-| `/groups` | 镜头组库：整组已生成成功的镜头组，按项目 → 分集归拢 |
-| `/compile` | 合片页：给一串 clip 地址，派发 `FILM_EXPORT` 渲染任务 |
-| `/generate` | 单条 prompt 直接生成视频的实验页 |
-| `/settings` `/admin` | 账号偏好 / 后台（key 池、用户） |
-| `/auth` `/payment` `/download` | 登录、充值、客户端下载 |
+| `/workspace/[projectId]` | The main workbench. One component per stage; `stage-config.ts` defines the order and derives the entry stage from episode status |
+| `/films` | Film library: finished outputs across projects |
+| `/groups` | Shot-group library: groups that rendered end to end, grouped by project → episode |
+| `/compile` | Compositing page: takes a list of clip URLs and dispatches a `FILM_EXPORT` render job |
+| `/generate` | Experiment page: generate a video straight from a single prompt |
+| `/settings` `/admin` | Account preferences / back office (key pool, users) |
+| `/auth` `/payment` `/download` | Sign-in, top-up, client download |
 
-组件按阶段一文件命名（`InputStage.tsx`、`AnalyzingStage.tsx`…），文件名即阶段 key，从 URL 能直接定位到代码。
+Components are named one file per stage (`InputStage.tsx`, `AnalyzingStage.tsx`, …); the file name *is* the stage key, so a URL leads straight to the code.
 
-## 关键技术点
+## Technical highlights
 
-### 分镜提示词的四层组装
+### Four-layer prompt assembly
 
-`domain/prompt/` 下按职责拆成四层：资产提示词（角色/场景/道具）、场景提示词、分镜提示词、整组预览。每层只做自己那一段的拼接，最后由 `asset-helpers.ts` 统一收口。
+`domain/prompt/` is split by responsibility: asset prompts (character/set/prop), scene prompts, shot prompts, and whole-group previews. Each layer only builds its own segment; `asset-helpers.ts` ties them together.
 
-### 内容合规的前置拦截
+### Moderation handled before the request leaves
 
-平台送审的三条链路（资产生图、场景站位图、Seedance 视频）在发包前都过同一张敏感词映射表：
+All three submitted paths (asset images, scene blocking images, Seedance video) pass the same sanitization table before dispatch:
 
 ```ts
 // packages/server/src/domain/prompt/asset-helpers.ts
@@ -100,80 +100,80 @@ export const PROMPT_SANITIZATION_MAP: Array<[string, string]> = [
 export function sanitizePromptForModeration(prompt: string) { … }
 ```
 
-新增一个禁词只需在表里加一行，三条链路同时生效。
+Adding one term is a single row, and all three paths pick it up.
 
-### 真人检测规避
+### Getting around real-person detection
 
-火山 Seedance 对「参考图疑似真人」的输入会整组拒出（`InputImageSensitiveContentDetected.PrivacyInformation`）。处理链路在客户端：
+Volcano's Seedance rejects an entire group when a reference image *looks* like a real person (`InputImageSensitiveContentDetected.PrivacyInformation`). The workaround lives on the client:
 
-1. `gen_face_grid.py` 用 OpenCV DNN（`res10_300x300_ssd_iter_140000`）+ Haar 级联双路定位人脸框，外扩 15%；
-2. 仅在框内绘制稀疏白色网格并与原图混合，无脸时退化为全图网格；
-3. `grid-overlay.ts` 用 sharp 负责尺寸与体积收敛：支持 jpeg/png/webp，边长生 300–6000 px，最大边压到 1280 px，JPEG q88，单张 <30 MB；
-4. Python 环境缺失或离线时自动降级为全图网格或直接透传，不阻断出图。
+1. `gen_face_grid.py` locates faces twice — OpenCV DNN (`res10_300x300_ssd_iter_140000`) plus a Haar cascade — and expands each box by 15%;
+2. a sparse white grid is drawn only inside the boxes and blended with the original; with no face it degrades to a full-frame grid;
+3. `grid-overlay.ts` uses sharp to keep size and bytes sane: jpeg/png/webp, edges 300–6000 px, longest edge capped at 1280 px, JPEG q88, under 30 MB per image;
+4. with no Python or offline, it degrades to a full-frame grid or passes the image through untouched rather than blocking generation.
 
-### 多供应商 Gateway 与 Key 池
+### Multi-vendor gateway and key pool
 
-统一的 `callAI(model, payload, cred, ctx)` 入口，下挂 8 个 provider 适配器。单文件最容易踩的几个坑都写在 `gateway/` 的注释里：各家对 `image_url` 的接受形态不同、Gemini 的 safety 字段命名不同、部分模型不支持 negative prompt。
+A single entry point, `callAI(model, payload, cred, ctx)`, fans out to eight provider adapters. The traps are documented in the `gateway/` comments: providers disagree on what `image_url` accepts, Gemini names its safety field differently, and some models have no negative prompt.
 
-`api-key-pool.ts` 做 key 轮转、失败冷却与并发分摊；上层 `task/queues.ts` 用 BullMQ 分出 text / image / video / voice 四条队列。
+`api-key-pool.ts` handles key rotation, cooldown after failure and concurrency spreading; `task/queues.ts` splits BullMQ into four queues: text / image / video / voice.
 
-### 任务容灾
+### Task resilience
 
-视频渲染是长任务，`render-job-repo.ts` 用「租约 + 心跳」模型：
+Video rendering is a long job, so `render-job-repo.ts` uses a lease-plus-heartbeat model:
 
-- 心跳每 30 秒续租，`reapStale` 回收超时未续租的任务；
-- 但心跳独立于执行，**卡死的任务会永远显示「心跳新鲜」**，所以又加了不看心跳的 claim 硬上限：默认 4 小时，`LONG_VIDEO_REWRITE` 单独放宽到 12 小时；
-- 判别逻辑抽成纯函数并配单测，止血走 admin 接口而不是裸 SQL。
+- a heartbeat renews the lease every 30 seconds, and `reapStale` reclaims expired ones;
+- but the heartbeat runs independently of execution, so **a wedged job keeps looking "freshly heartbeating"** — hence a claim ceiling that ignores heartbeats: 4 hours by default, 12 hours for `LONG_VIDEO_REWRITE`;
+- the deciding logic is a pure function with unit tests, and intervention goes through an admin endpoint rather than raw SQL.
 
-## 目录结构
+## Layout
 
 ```
 packages/
-  server/       服务端：domain（业务）/ gateway（供应商）/ task（队列）/ ai-worker
-  web/          Next.js 前端与 API 路由
-  client/       Electron 客户端：ffmpeg 渲染、人脸网格、素材库
-  client-live/  直播客户端瘦壳
-  local-server/ 客户端本地 Fastify 服务
-  shared/       共享类型与计算（定价、时长等）
-  e2e/          端到端测试
-docs/           架构、运维、故障复盘；assets/ 下为本文引用的结构图
-scripts/        部署、回滚、诊断、客户端发版
+  server/       Server: domain (business) / gateway (vendors) / task (queues) / ai-worker
+  web/          Next.js frontend and API routes
+  client/       Electron client: ffmpeg rendering, face grid, media library
+  client-live/  Thin shell for the live client
+  local-server/ Client-side local Fastify service
+  shared/       Shared types and calculations (pricing, durations)
+  e2e/          End-to-end tests
+docs/           Architecture, operations, incident reviews; assets/ holds the diagrams used above
+scripts/        Deploy, rollback, diagnostics, client release
 ```
 
-## 技术栈
+## Stack
 
-| 层 | 选型 |
+| Layer | Choice |
 |---|---|
-| 前端 | Next.js 16 · React 19 · Tailwind 4 · Radix UI |
-| 服务端 | Node.js · TypeScript 5.6 · zod · NextAuth |
-| 存储 | PostgreSQL 16 · Redis · MinIO |
-| 队列 | BullMQ |
-| 客户端 | Electron 43 · ffmpeg · sharp |
-| 本地服务 | Fastify 5 · better-sqlite3 |
+| Frontend | Next.js 16 · React 19 · Tailwind 4 · Radix UI |
+| Server | Node.js · TypeScript 5.6 · zod · NextAuth |
+| Storage | PostgreSQL 16 · Redis · MinIO |
+| Queue | BullMQ |
+| Client | Electron 43 · ffmpeg · sharp |
+| Local server | Fastify 5 · better-sqlite3 |
 | AI | ARK Seedance · OpenAI · Gemini · DeepSeek · Kimi · MiniMax · ComfyUI |
-| 测试 | Vitest（服务端 946 个单测） |
+| Tests | Vitest (946 server unit tests) |
 
-## 快速开始
+## Quick start
 
 ```bash
 pnpm install
-cp .env.example .env          # 填入数据库口令、AI key
+cp .env.example .env          # fill in database credentials and AI keys
 docker compose up -d postgres redis minio
 pnpm -r build
 docker compose up -d web ai-worker
 ```
 
-本地开发：
+Local development:
 
 ```bash
 pnpm --filter '@dramaforge/web' dev
 pnpm --filter '@dramaforge/server' dev
 ```
 
-## 说明
+## Notes
 
-- 本仓库是**服务端 + 客户端源码快照**，不含模型权重、不含构建产物、不含任何真实凭证。
-- `packages/client/resources/face-models/` 内的 DNN 模型为 OpenCV 官方发布的人脸检测模型。
-- 部署脚本中的 `YOUR_SERVER` / `your-domain.example.com` / `deploy_key` 均为占位符，替换后可用。
-- `docs/assets/*.svg` 由仓库代码与 migrations 派生绘制，**不是界面截图**：本仓库不含可运行的前端构建，真机截图需按「快速开始」把整套服务跑起来。
-- 生产环境的真实接入信息不在本仓库，也不应提交到任何公开仓库。
+- This is a **source snapshot of the server and client**; it contains no model weights, no build artifacts and no real credentials.
+- The DNN model under `packages/client/resources/face-models/` is OpenCV's official face-detection model.
+- `YOUR_SERVER`, `your-domain.example.com` and `deploy_key` in the deploy scripts are placeholders — replace them and the scripts work.
+- `docs/assets/*.svg` are derived from the code and migrations in this repository and are **not UI screenshots**: the repo ships no runnable frontend build, so real screenshots require bringing the full stack up via "Quick start".
+- Production access details are not in this repository and must never be committed to a public one.
