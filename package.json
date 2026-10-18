@@ -1,0 +1,16 @@
+{
+  "name": "dramaforge-cs",
+  "private": true,
+  "packageManager": "pnpm@9.15.0",
+  "scripts": {
+    "typecheck": "pnpm -r typecheck",
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "test:e2e:film": "pnpm --filter @dramaforge/e2e film-export",
+    "test:e2e:upgrade": "pnpm --filter @dramaforge/e2e force-upgrade",
+    "test:e2e": "pnpm run test:e2e:film && pnpm run test:e2e:upgrade",
+    "test:e2e:local": "pnpm --filter @dramaforge/e2e local",
+    "deploy": "bash scripts/deploy.sh",
+    "rollback": "bash scripts/rollback.sh"
+  }
+}

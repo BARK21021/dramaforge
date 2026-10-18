@@ -1,0 +1,51 @@
+{
+  "runWindow": {
+    "startedAt": "2026-07-22T04:20:16+08:00",
+    "finishedAt": "2026-07-22T04:27:59+08:00"
+  },
+  "profile": {
+    "baseUrl": "https://your-domain.example.com",
+    "traffic": "authenticated read-only closed loop",
+    "thinkTimeMs": "550-950",
+    "paidAiCalls": 0,
+    "temporaryUserDeleted": true
+  },
+  "totals": {
+    "measuredHttpRequests": 31765,
+    "measuredHttpFailures": 0,
+    "measuredHttpSuccessRate": 1,
+    "peakThroughputRps": 244.28
+  },
+  "stages": [
+    { "vus": 1, "seconds": 15.06, "requests": 19, "rps": 1.26, "failures": 0, "p50Ms": 47, "p95Ms": 90, "p99Ms": 90, "maxMs": 90 },
+    { "vus": 5, "seconds": 20.80, "requests": 128, "rps": 6.15, "failures": 0, "p50Ms": 45, "p95Ms": 115, "p99Ms": 174, "maxMs": 273 },
+    { "vus": 10, "seconds": 20.81, "requests": 256, "rps": 12.30, "failures": 0, "p50Ms": 46, "p95Ms": 92, "p99Ms": 186, "maxMs": 200 },
+    { "vus": 20, "seconds": 20.74, "requests": 497, "rps": 23.96, "failures": 0, "p50Ms": 46, "p95Ms": 146, "p99Ms": 350, "maxMs": 361 },
+    { "vus": 35, "seconds": 20.80, "requests": 883, "rps": 42.44, "failures": 0, "p50Ms": 46, "p95Ms": 104, "p99Ms": 337, "maxMs": 408 },
+    { "vus": 50, "seconds": 25.90, "requests": 1573, "rps": 60.74, "failures": 0, "p50Ms": 44, "p95Ms": 96, "p99Ms": 318, "maxMs": 431 },
+    { "vus": 75, "seconds": 25.91, "requests": 2336, "rps": 90.18, "failures": 0, "p50Ms": 46, "p95Ms": 105, "p99Ms": 401, "maxMs": 520 },
+    { "vus": 100, "seconds": 25.93, "requests": 3105, "rps": 119.77, "failures": 0, "p50Ms": 48, "p95Ms": 194, "p99Ms": 419, "maxMs": 597 },
+    { "vus": 150, "seconds": 26.00, "requests": 4554, "rps": 175.14, "failures": 0, "p50Ms": 62, "p95Ms": 186, "p99Ms": 561, "maxMs": 858 },
+    { "vus": 200, "seconds": 25.92, "requests": 5972, "rps": 230.37, "failures": 0, "p50Ms": 73, "p95Ms": 223, "p99Ms": 735, "maxMs": 1174 },
+    { "vus": 250, "seconds": 26.22, "requests": 6406, "rps": 244.28, "failures": 0, "p50Ms": 212, "p95Ms": 452, "p99Ms": 905, "maxMs": 1103 },
+    { "vus": 300, "seconds": 26.30, "requests": 6036, "rps": 229.47, "failures": 0, "p50Ms": 481, "p95Ms": 902, "p99Ms": 1369, "maxMs": 1786 }
+  ],
+  "serverPeaks": {
+    "hostLoad1": 5.54,
+    "hostMinAvailableMemoryMiB": 962.2,
+    "web": { "cpuPercent": 107.31, "memoryMiB": 192.3, "memoryPercent": 50.08 },
+    "postgres": { "cpuPercent": 20.93, "memoryMiB": 100.1, "memoryPercent": 26.08, "connections": 39, "activeConnections": 2 },
+    "redis": { "cpuPercent": 3.85, "memoryMiB": 13.05, "clients": 108, "rejectedConnections": 0, "evictedKeys": 0 },
+    "minio": { "cpuPercent": 37.79, "memoryMiB": 116.7, "memoryPercent": 91.15 },
+    "containerRestarts": 0,
+    "containerOomKills": 0
+  },
+  "sseProbe": {
+    "requestedConnections": 100,
+    "redisClientIncrease": 100,
+    "httpConnectionsEstablished": 100,
+    "firstEventObserved": 0,
+    "endedByClient": true,
+    "result": "transport capacity passed; event delivery failed because the response remained buffered"
+  }
+}

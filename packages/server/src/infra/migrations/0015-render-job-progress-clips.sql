@@ -1,0 +1,12 @@
+-- 0015-render-job-progress-clips.sql
+-- 持久化 chain 渐进回传的组片段(progress_clips),根治刷新 / SSE 断线后渐进片丢失。
+--
+-- 背景:每组完成时编排器经 /progress 上报 groupClip,SSE 实时推前端没问题;但
+-- task_events."taskId" 有外键 REFERENCES tasks(id),而 CHAIN_COMPILE 只插 render_jobs、
+-- 不插 tasks,persistEvent 的 WHERE EXISTS tasks 不命中 → groupClip 永不落 task_events
+-- → listTaskProgressClips 恒空 → 刷新 / 4s 轮询拿不到渐进片,已完成组卡片翻不回视频。
+--
+-- 解法:把渐进组片段直接存到 render_jobs.progress_clips(JSONB 数组),与 progress/stage
+-- 同源(每次 /progress 上报 append);恢复端点 GET /api/tasks/[taskId] 读行内 progressClips,
+-- 不再依赖 task_events。ADD COLUMN ... DEFAULT 在 PG 上元数据级、非阻塞;IF NOT EXISTS 幂等。
+ALTER TABLE render_jobs ADD COLUMN IF NOT EXISTS progress_clips JSONB NOT NULL DEFAULT '[]'::jsonb;

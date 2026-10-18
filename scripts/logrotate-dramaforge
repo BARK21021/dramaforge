@@ -1,0 +1,23 @@
+# =============================================================================
+# /etc/logrotate.d/dramaforge — dramaforge 自有日志轮转（2026-07-23 实战期补）
+# 依赖 logrotate.timer 已启用（否则不跑）。copytruncate 免重启写进程。
+# =============================================================================
+/var/log/dramaforge-secmon.log {
+    daily
+    rotate 7
+    compress
+    delaycompress
+    missingok
+    notifempty
+    size 5M
+    copytruncate
+}
+
+/var/log/sf-backup.log {
+    weekly
+    rotate 4
+    compress
+    missingok
+    notifempty
+    copytruncate
+}

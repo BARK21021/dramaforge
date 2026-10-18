@@ -1,0 +1,488 @@
+/* ============================================================
+ * globals.css - 全局样式表
+ * ============================================================
+ *
+ * Tailwind v4 入口 + 设计令牌（CSS 自定义变量）+ 基础样式 + 通用组件类。
+ *
+ * 双色方案铁律（全应用统一）：
+ *   --accent  琥珀 #f59e0b  身份 / 品牌层（Logo、品牌徽章、进度指示、身份标记）
+ *   --action  蓝色 #3b82f6  统领所有可点击行为（主按钮、链接、焦点态、激活态）
+ *   两者绝不混用：accent 不做按钮底色，action 不做品牌标记。
+ *
+ * 主题策略：
+ *   :root  = 深色主题（应用默认 theme="dark"，无 DOM class 切换时直接生效）
+ *   .light = 浅色主题覆盖（应用于 <html class="light"> 时生效）
+ *
+ * 被全局 18+ 组件引用，修改变量名需同步更新消费者。
+ * ============================================================ */
+
+@import "tailwindcss";
+
+/* ============================================================
+ * 动画令牌（Tailwind v4 @theme）
+ * 生成 .animate-fade-in / .animate-fade-out / .animate-scale-in /
+ *      .animate-slide-in-right / .animate-slide-up 工具类。
+ * loadingbar / shimmer 供任意值语法（animate-[loadingbar_...]）与
+ *               .skeleton 使用，定义为全局 @keyframes。
+ * ============================================================ */
+@theme {
+  --animate-fade-in: fade-in 0.2s ease-out;
+  --animate-fade-out: fade-out 0.15s ease-in;
+  --animate-scale-in: scale-in 0.2s ease-out;
+  --animate-slide-in-right: slide-in-right 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-slide-up: slide-up 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(100%); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+/* 顶部加载条（workspace 顶栏进度条） */
+@keyframes loadingbar {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(350%); }
+}
+/* 骨架屏微光扫描 */
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ============================================================
+ * 设计令牌 - 深色主题（默认）
+ * 应用默认 theme="dark"，:root 直接承载深色值，
+ * 无需 .dark class 即可呈现深色 UI。
+ * ============================================================ */
+:root {
+  /* ---- 背景 ---- */
+  --bg: #0b0d12;            /* 页面底色（深，微蓝调） */
+  --bg-2: #11141b;          /* 次级背景（次级面板/分组） */
+  --bg-card: #161a23;       /* 卡片背景 */
+  --bg-elevated: #131720;   /* 抬升面（顶栏/侧栏/底栏） */
+  --bg-hover: #1d2230;      /* 悬停态背景 */
+  --bg-input: #161a23;      /* 输入框背景 */
+
+  /* ---- 文字 ---- */
+  --text: #f1f5f9;          /* 主文字（slate-100） */
+  --text-1: #e2e8f0;        /* 主文字别名（slate-200） */
+  --text-2: #94a3b8;        /* 次级文字（slate-400） */
+  --text-3: #64748b;        /* 弱化/占位文字（slate-500） */
+
+  /* ---- 边框 ---- */
+  --border: #232936;        /* 默认边框 */
+  --border-light: #1a1f2a;  /* 细分隔线 */
+  --border-strong: #2f3645; /* 强边框（输入框/强调容器） */
+
+  /* ---- 身份 / 品牌（琥珀，仅身份层，不做可点击） ----
+     铁律：accent 仅用于 Logo / 品牌徽章 / 进度身份层 / 身份标记；
+           绝不用作按钮底色或可点击元素 — 那是 --action 的语义。 */
+  --accent: #f59e0b;        /* amber-500 */
+  --accent-dim: rgba(245, 158, 11, 0.14);   /* 品牌徽章底色（对齐 --action-dim 写法） */
+  --accent-hover: #d97706;  /* amber-600 悬停加深（对齐 --action-hover 写法） */
+  --accent-glow: rgba(245, 158, 11, 0.45);  /* 品牌描边光晕 */
+
+  /* ---- 行为（蓝色，统领所有可点击） ----
+     铁律：action 是主按钮 / 链接 / 焦点态 / 激活态的唯一色；
+           不用作品牌标记 — 那是 --accent 的语义。
+     accent 与 action 绝不混用。 */
+  --action: #3b82f6;        /* blue-500 */
+  --action-dim: rgba(59, 130, 246, 0.16);   /* 激活/焦点底色 */
+  --action-hover: #2563eb;  /* blue-600 悬停加深 */
+  --glow-action: rgba(59, 130, 246, 0.4);         /* 主按钮光晕（深色） */
+  --glow-action-strong: rgba(59, 130, 246, 0.55); /* 主按钮强光晕（悬停） */
+
+  /* ---- 状态色 ---- */
+  --success: #10b981;       /* emerald-500 */
+  --success-dim: rgba(16, 185, 129, 0.14);
+  --warning: #f97316;       /* orange-500 */
+  --warning-dim: rgba(249, 115, 22, 0.14);
+  --error: #ef4444;         /* red-500 */
+  --error-dim: rgba(239, 68, 68, 0.14);
+  --danger: #ef4444;        /* error 别名 */
+
+  /* ---- 圆角 ---- */
+  --radius: 0.5rem;         /* 8px 默认 */
+  --radius-sm: 0.375rem;    /* 6px 按钮/徽章 */
+  --radius-lg: 0.75rem;     /* 12px 弹窗/大卡片 */
+
+  /* ---- 字体 ---- */
+  --font-display: "Inter", "PingFang SC", "Microsoft YaHei", ui-sans-serif,
+    system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+    "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+
+  /* ---- 阴影 ---- */
+  --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.4);
+}
+
+/* ============================================================
+ * 设计令牌 - 浅色主题覆盖
+ * 应用于 <html class="light"> 时生效（.light 与 :root 等特异性，
+ * 源码顺序在后故覆盖深色值）。
+ * ============================================================ */
+.light {
+  /* ---- 背景 ---- */
+  --bg: #f8fafc;            /* slate-50 */
+  --bg-2: #f1f5f9;          /* slate-100 */
+  --bg-card: #ffffff;
+  --bg-elevated: #ffffff;
+  --bg-hover: #f1f5f9;      /* slate-100 */
+  --bg-input: #ffffff;
+
+  /* ---- 文字 ---- */
+  --text: #0f172a;          /* slate-900 */
+  --text-1: #1e293b;        /* slate-800 */
+  --text-2: #475569;        /* slate-600 */
+  --text-3: #94a3b8;        /* slate-400 */
+
+  /* ---- 边框 ---- */
+  --border: #e2e8f0;        /* slate-200 */
+  --border-light: #f1f5f9;  /* slate-100 */
+  --border-strong: #cbd5e1; /* slate-300 */
+
+  /* ---- 身份 / 品牌（浅底需加深以保证对比度；铁律同深色主题） ---- */
+  --accent: #d97706;        /* amber-600 */
+  --accent-dim: rgba(217, 119, 6, 0.10);
+  --accent-hover: #b45309;  /* amber-700 悬停加深 */
+  --accent-glow: rgba(217, 119, 6, 0.35);
+
+  /* ---- 行为（浅底需加深） ---- */
+  --action: #2563eb;        /* blue-600 */
+  --action-dim: rgba(37, 99, 235, 0.10);
+  --action-hover: #1d4ed8;  /* blue-700 */
+  --glow-action: rgba(37, 99, 235, 0.28);  /* 主按钮光晕（浅色，降低饱和） */
+  --glow-action-strong: rgba(37, 99, 235, 0.4);
+
+  /* ---- 状态色（浅底加深） ---- */
+  --success: #059669;       /* emerald-600 */
+  --success-dim: rgba(5, 150, 105, 0.10);
+  --warning: #ea580c;       /* orange-600 */
+  --warning-dim: rgba(234, 88, 12, 0.10);
+  --error: #dc2626;         /* red-600 */
+  --error-dim: rgba(220, 38, 38, 0.10);
+  --danger: #dc2626;
+
+  /* ---- 阴影（浅色更柔和） ---- */
+  --shadow-lg: 0 10px 30px rgba(15, 23, 42, 0.12);
+}
+
+/* ============================================================
+ * 基础样式
+ * ============================================================ */
+@layer base {
+  html,
+  body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+  }
+
+  body {
+    font-family: var(--font-display);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* 默认边框色：让无显式颜色的 border 工具类使用主题边框色。
+     放入 base 层，确保被 utilities 层的 border-[var(--xxx)] 覆盖。 */
+  *,
+  ::before,
+  ::after {
+    border-color: var(--border);
+  }
+
+  /* 焦点可见性：键盘导航时统一用 --action 描边 */
+  :focus-visible {
+    outline: 2px solid var(--action);
+    outline-offset: 2px;
+  }
+
+  /* 全局滚动条（深色主题适配） */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--border-strong);
+  }
+
+  /* 选区颜色（品牌色微染） */
+  ::selection {
+    background: var(--accent-dim);
+    color: var(--text);
+  }
+}
+
+/* ============================================================
+ * 通用组件类
+ * 放入 components 层，确保可被 utilities 层覆盖与组合。
+ * ============================================================ */
+@layer components {
+  /* ---- 卡片 ---- */
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  }
+  .card-pad {
+    padding: 1rem;
+  }
+
+  /* ---- 徽章 ---- */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.125rem 0.5rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+    font-weight: 500;
+    line-height: 1.25;
+    white-space: nowrap;
+  }
+  .badge-accent {
+    background: var(--accent-dim);
+    color: var(--accent);
+  }
+  .badge-muted {
+    background: var(--bg-hover);
+    color: var(--text-3);
+  }
+
+  /* ---- 按钮 ----
+   * primary / brand 为实色填充；ghost 为描边。
+   * 尺寸、圆角、内边距由调用方用 Tailwind 工具类补充
+   * （与 components/ui/Button.tsx 的 variant/size 组合一致）。 */
+  .btn-primary {
+    background: linear-gradient(180deg, var(--action) 0%, var(--action-hover) 100%);
+    color: #ffffff;
+    border: none;
+    cursor: pointer;
+    box-shadow:
+      0 1px 2px rgba(0, 0, 0, 0.28),
+      0 6px 16px -6px var(--glow-action),
+      inset 0 1px 0 rgba(255, 255, 255, 0.18);
+    transition: box-shadow 0.18s ease, transform 0.1s ease, filter 0.18s ease;
+  }
+  .btn-primary:hover:not(:disabled) {
+    filter: brightness(1.06);
+    box-shadow:
+      0 2px 4px rgba(0, 0, 0, 0.32),
+      0 10px 22px -6px var(--glow-action-strong),
+      inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  }
+  .btn-primary:active:not(:disabled) {
+    transform: translateY(1px);
+    box-shadow:
+      0 1px 2px rgba(0, 0, 0, 0.3),
+      inset 0 1px 3px rgba(0, 0, 0, 0.25);
+  }
+
+  .btn-brand {
+    background: linear-gradient(180deg, var(--accent) 0%, color-mix(in srgb, var(--accent) 86%, #000) 100%);
+    color: #ffffff;
+    border: none;
+    cursor: pointer;
+    box-shadow:
+      0 1px 2px rgba(0, 0, 0, 0.28),
+      0 6px 16px -6px var(--accent-glow),
+      inset 0 1px 0 rgba(255, 255, 255, 0.18);
+    transition: box-shadow 0.18s ease, transform 0.1s ease, filter 0.18s ease;
+  }
+  .btn-brand:hover:not(:disabled) {
+    filter: brightness(1.1);
+    box-shadow:
+      0 2px 4px rgba(0, 0, 0, 0.32),
+      0 10px 22px -6px var(--accent-glow),
+      inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  }
+  .btn-brand:active:not(:disabled) {
+    transform: translateY(1px);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), inset 0 1px 3px rgba(0, 0, 0, 0.25);
+  }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--text-2);
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+  }
+  .btn-ghost:hover:not(:disabled) {
+    background: var(--bg-hover);
+    color: var(--text);
+    border-color: var(--border-strong);
+  }
+  .btn-ghost:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+
+  /* ---- 输入框基类 ---- */
+  .input-base {
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    color: var(--text);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  .input-base::placeholder {
+    color: var(--text-3);
+  }
+  .input-base:focus {
+    outline: none;
+    border-color: var(--action);
+    box-shadow: 0 0 0 2px var(--action-dim);
+  }
+
+  /* ---- 骨架屏 ---- */
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      var(--bg-2) 25%,
+      var(--bg-hover) 50%,
+      var(--bg-2) 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite linear;
+  }
+
+  /* ---- 状态徽章 ---- */
+  .badge-success {
+    background: var(--success-dim);
+    color: var(--success);
+  }
+  .badge-warning {
+    background: var(--warning-dim);
+    color: var(--warning);
+  }
+  .badge-error {
+    background: var(--error-dim);
+    color: var(--error);
+  }
+  .badge-action {
+    background: var(--action-dim);
+    color: var(--action);
+  }
+
+  /* ---- 容器与间距 ---- */
+  .container-app {
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  @media (min-width: 640px) {
+    .container-app {
+      padding-left: 1.5rem;
+      padding-right: 1.5rem;
+    }
+  }
+  @media (min-width: 1024px) {
+    .container-app {
+      padding-left: 2rem;
+      padding-right: 2rem;
+    }
+  }
+
+  .section-y {
+    padding-top: 1.5rem;
+    padding-bottom: 1.5rem;
+  }
+  @media (min-width: 640px) {
+    .section-y {
+      padding-top: 2rem;
+      padding-bottom: 2rem;
+    }
+  }
+}
+
+/* ============================================================
+ * 工具类
+ * ============================================================ */
+@layer utilities {
+  /* 高级感背景：分层径向光晕，用于落地页/登录/注册等门面页（深色为主） */
+  .premium-backdrop {
+    background:
+      radial-gradient(1200px 600px at 10% -10%, rgba(59, 130, 246, 0.18), transparent 60%),
+      radial-gradient(1000px 500px at 110% 110%, rgba(245, 158, 11, 0.14), transparent 58%),
+      radial-gradient(700px 700px at 50% 60%, rgba(255, 255, 255, 0.025), transparent 70%),
+      var(--bg);
+  }
+
+  /* 隐藏滚动条（保持可滚动） */
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* 行截断 */
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
+
+/* ============================================================
+ * 业务流程 UI 文字缩放
+ * 通过 .biz-ui-scale 将 Tailwind 文字档位整体提升一级，
+ * 作用域限定业务流程区域（不影响顶栏/侧栏等框架元素）。
+ * ============================================================ */
+.biz-ui-scale {
+  font-size: 0.875rem; /* 14px 基准 */
+}
+.biz-ui-scale .text-xs {
+  font-size: 0.8125rem; /* 13px */
+}
+.biz-ui-scale .text-sm {
+  font-size: 0.9375rem; /* 15px */
+}
+.biz-ui-scale .text-base {
+  font-size: 1rem; /* 16px */
+}
+.biz-ui-scale .text-lg {
+  font-size: 1.125rem; /* 18px */
+}
+.biz-ui-scale .text-xl {
+  font-size: 1.25rem; /* 20px */
+}
+.biz-ui-scale .text-2xl {
+  font-size: 1.5rem; /* 24px */
+}
+.biz-ui-scale .text-display {
+  font-size: 1.875rem; /* 30px */
+}

@@ -1,0 +1,27 @@
+{
+  "name": "@dramaforge/e2e",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Isolated local E2E harness for FILM_EXPORT and force_upgrade, with loopback and dedicated-resource guards.",
+  "scripts": {
+    "test": "tsx --test src/lib/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "local": "tsx src/run-local-e2e.ts",
+    "film-export": "tsx src/film-export-e2e.ts",
+    "force-upgrade": "tsx src/force-upgrade-e2e.ts"
+  },
+  "dependencies": {
+    "@ffmpeg-installer/ffmpeg": "^1.1.0",
+    "@dramaforge/client": "workspace:*",
+    "@dramaforge/shared": "workspace:*",
+    "minio": "^8.0.0",
+    "pg": "^8.13.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@types/pg": "^8.11.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  }
+}

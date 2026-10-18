@@ -1,0 +1,104 @@
+# =============================================================================
+# DramaForge Electron Builder 配置 (⑪ client/shell 桌面端打包)
+# =============================================================================
+#
+# 用法：
+#   cd packages/client && pnpm package
+#   (或根目录: pnpm --filter '@dramaforge/client' package)
+#
+# 产物：Windows x64 NSIS 安装包（portable 暂略；${target} 宏不支持 nsis+portable 同名区分，需时按 target 分开命名再加）
+#
+# 保护策略：bytenode V8 字节码 (.jsc)
+#   - build:main (esbuild bundle) → dist-main/index.js + preload.js
+#   - protect.mjs (bytenode compile) → dist-main/index.jsc + preload.jsc
+#   - dist-main/index.js 被替换为 stub: require('bytenode'); require('./index.jsc')
+#   - bytenode 在 dependencies 中，electron-builder 会打包进 node_modules
+#
+# ffmpeg 二进制：@ffmpeg-installer/win32-x64 (optionalDependency)
+#   - extraResources 把 ffmpeg.exe 放到 resources/ffmpeg/
+#   - 运行时 client/src/ffmpeg 通过 @ffmpeg-installer/ffmpeg 解析路径
+#
+# ⚠️ bytenode V8 兼容性风险：
+#   .jsc 字节码与 Electron 内置 V8 版本强绑定。app1 的 protect.mjs 注释记录了
+#   ELECTRON_RUN_AS_NODE 编译模式与 GUI 运行模式 V8 flags 不同可导致
+#   cachedDataRejected。若运行时 .jsc 加载失败，回退方案：
+#     1. 用 Electron 二进制（而非 node）编译 .jsc
+#     2. 或改用 javascript-obfuscator（见 app1/scripts/protect.mjs）
+# =============================================================================
+
+appId: com.dramaforge.cs
+productName: DramaForge CS
+copyright: Copyright © 2026 DramaForge
+
+# main 入口在 package.json（"main": "dist-main/index.js"），electron-builder 从那里读，yml 不配置
+
+directories:
+  # 输出目录（相对于 packages/client/）
+  output: release
+  # 构建资源根
+  buildResources: build
+
+# 产物命名：DramaForge-<version>-<arch>.<ext>（${target} 非 electron-builder 26.x 合法宏，用 ${arch}）
+artifactName: "DramaForge-${version}-${arch}.${ext}"
+
+# 不 rebuild 原生模块（sharp 等用预编译二进制）
+npmRebuild: false
+
+# 打包文件
+files:
+  - dist-main/**/*
+  - package.json
+  # bytenode runtime（加载 .jsc 需要）
+  - node_modules/bytenode/**/*
+  # @ffmpeg-installer 运行时路径解析
+  - node_modules/@ffmpeg-installer/ffmpeg/**/*
+  - node_modules/@ffmpeg-installer/win32-x64/**/*
+  # sharp 原生模块（JS + win32-x64 预编译二进制；N-API 稳定 ABI 可直接在 Electron 用，npmRebuild:false）
+  - node_modules/sharp/**/*
+  - node_modules/@img/sharp-win32-x64/**/*
+  - node_modules/fluent-ffmpeg/**/*
+  # @dramaforge/shared workspace 依赖
+  - node_modules/@dramaforge/shared/**/*
+  # 排除测试
+  - "!**/test/**"
+  - "!**/*.test.ts"
+  - "!**/*.test.js"
+
+# 额外资源（放到 resources/ 下，不参与 Node require 解析）
+extraResources:
+  # ffmpeg 二进制（win32-x64）
+  - from: node_modules/@ffmpeg-installer/win32-x64/ffmpeg.exe
+    to: ffmpeg/ffmpeg.exe
+    filter: ["**/*"]
+  # 批6 音色库（200 个预置 wav + manifest.json，~44MB）
+  # 打包后落在 <app>/resources/voices/，main 进程按 app.isPackaged 解析路径读取。
+  # 媒体字节仅存客户端本地（硬约束 dramaforge-assets-client-local），服务器零媒体字节。
+  - from: resources/voices
+    to: voices
+    filter: ["**/*"]
+  # 深度图推理脚本 gen_depth.py（随客户端打包；模型权重 ~1.4GB 不打包，首次推理下载到 userData/depth-models）
+  # 打包后落在 <app>/resources/scripts/，main 进程按 app.isPackaged 解析路径调用 Python。
+  - from: resources/scripts
+    to: scripts
+    filter: ["**/*"]
+  # 人脸检测 DNN 模型（deploy.prototxt + caffemodel ~10MB，随客户端打包，无需首次下载）
+  # 打包后落在 <app>/resources/face-models/，gen_face_grid.py 自动检测脚本父目录。
+  - from: resources/face-models
+    to: face-models
+    filter: ["**/*"]
+
+# Windows 目标
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  icon: build/icon.png
+
+# NSIS 安装器配置
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: DramaForge CS

@@ -1,0 +1,243 @@
+# =============================================================================
+# DramaForge — 云端部署编排 (docker-compose)
+# =============================================================================
+#
+# 目标：在云服务器 (YOUR_SERVER, 1.8GB) 上以 Docker Compose 运行 dramaforge-cs
+# 后端栈。C/S 重构后：web (Next.js) + ai-worker (纯 AI BullMQ 消费者) + 基础设施。
+#
+# 设计约束：
+#   1. 服务器仅 1.8GB 内存（OOM 史），各服务 mem_limit 收紧，留 ~500MB 给 OS。
+#   2. pg/redis/minio 绝不暴露公网——只挂 internal network，无 ports 映射。
+#   3. 无 ffmpeg 服务——ffmpeg 只在客户端 Electron 内运行（⑧ client/ffmpeg）。
+#   4. web 与 ai-worker 用各自独立镜像（不同于 app1 的共用镜像），因为构建
+#      产物完全不同（web=next standalone，ai-worker=esbuild bundle）。
+#   5. 镜像在本地 build→save→ssh load，服务器不 build（见 deploy.sh）。
+#   6. .env 通过 env_file 引用，compose 不硬编码任何密钥。
+#
+# 内存分配 (限制总和超配主机 RAM，但实测峰值总和 ~800MB，配 6GB swap 兜底):
+#   web        768m  (Next.js + React 19; 2026-07-23 由 384m 上调——生视频时内存峰值>384m 触发 cgroup OOM→502)
+#   ai-worker  256m  (纯 Node，无 ffmpeg)
+#   postgres   512m  (shared_buffers 128m + VACUUM/maintenance_work_mem 64m 尖峰留余量; 2026-07-25 由 384m 上调)
+#   redis      512m  (maxmemory 256mb)
+#   minio      256m  (对象存储; 2026-07-25 由 128m 上调,实测 77%)
+# =============================================================================
+
+# 日志轮转：所有容器统一 json-file + 10m×3（每容器封顶 30MB），
+# 防日志无限增长撑爆磁盘（历史 pg recovery-loop P0 同机制）。
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  # ---------------------------------------------------------------------------
+  # PostgreSQL 16 — 主数据库 (tasks / render_jobs / users / system_configs)
+  # 应用通过 DATABASE_URL 连接 (compose 里覆盖为服务名 postgres)。
+  # 绝不暴露 5432 到公网——仅 internal network。
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: dramaforge-postgres
+    restart: unless-stopped
+    mem_limit: 512m
+    memswap_limit: 1g
+    logging: *default-logging
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-dramaforge}
+      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks: [dramaforge_net]
+    # 无 ports 映射——生产不暴露 5432
+
+  # ---------------------------------------------------------------------------
+  # Redis 7 — BullMQ 队列 + Pub/Sub + 缓存
+  # 应用通过 REDIS_URL 连接 (compose 里覆盖为服务名 redis)。
+  # 绝不暴露 6379 到公网——仅 internal network。
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: dramaforge-redis
+    restart: unless-stopped
+    mem_limit: 512m
+    memswap_limit: 1g
+    logging: *default-logging
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      # maxmemory 384mb：noeviction 下超限 Redis 拒写返 OOM（曾致 61 次 VIDEO_GENERATE
+      # 假死，主修在 ai-worker/processor.ts 把 OOM 当可重试）。384mb 留 128mb 给 Redis
+      # 进程开销（AOF/碎片），低于 mem_limit 512m 避免 cgroup OOM-kill（512mb 内部上限会
+      # 与容器限额撞顶被杀，比拒写更糟）。host 有 ~750m free，384mb 足够应对瞬时队列峰值。
+      - --maxmemory
+      - 384mb
+      - --maxmemory-policy
+      - noeviction
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "PING"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks: [dramaforge_net]
+    # 无 ports 映射——生产不暴露 6379
+
+  # ---------------------------------------------------------------------------
+  # MinIO — 自托管对象存储 (用户上传 / AI 产物 / 客户端日志)
+  # 应用通过 MINIO_ENDPOINT 连接 (compose 里覆盖为服务名 minio)。
+  # 绝不暴露 9000/9001 到公网——仅 internal network。
+  # ---------------------------------------------------------------------------
+  minio:
+    image: minio/minio:latest
+    container_name: dramaforge-minio
+    restart: unless-stopped
+    mem_limit: 256m
+    memswap_limit: 512m
+    logging: *default-logging
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:?MINIO_ACCESS_KEY must be set in .env}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:?MINIO_SECRET_KEY must be set in .env}
+    command: ["server", "/data", "--console-address", ":9001"]
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks: [dramaforge_net]
+    # 无 ports 映射——生产不暴露 9000/9001
+
+  # ---------------------------------------------------------------------------
+  # 一次性迁移任务 (幂等，可安全重复执行)
+  # 通过 profile 隔离：仅 `docker compose --profile migrate run --rm migrate` 时运行。
+  # deploy.sh 在部署新镜像后跑此服务，执行 packages/server/src/infra/migrate.ts
+  # 打包出的 dist/migrate.js。
+  # ---------------------------------------------------------------------------
+  migrate:
+    image: dramaforge-cs-ai-worker:${TAG:-latest}
+    container_name: dramaforge-migrate
+    restart: "no"
+    logging: *default-logging
+    profiles: ["migrate"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file: [.env]
+    environment:
+      # 覆盖 .env 中可能的 localhost，确保容器内连到 compose 服务名
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-dramaforge}
+      REDIS_URL: redis://redis:6379
+      MINIO_ENDPOINT: minio
+      NODE_ENV: production
+    command: ["node", "dist/migrate.js"]
+    networks: [dramaforge_net]
+
+  # ---------------------------------------------------------------------------
+  # Web — Next.js (⑤ packages/web)
+  # 镜像本地 build (packages/web/Dockerfile)，CMD = next start。
+  # 只绑 127.0.0.1（loopback），不暴露公网；对外入口由 nginx 监听 443 反代到此。
+  # ---------------------------------------------------------------------------
+  web:
+    image: dramaforge-cs-web:${TAG:-latest}
+    container_name: dramaforge-web
+    restart: unless-stopped
+    # 768m (2026-07-23 由 384m 上调)：生视频时 web 跑 SSE 流式进度 + API 路由 + 图片代理，
+    # 内存峰值 >384m 触发 cgroup OOM (CONSTRAINT_MEMCG) → next start 被 SIGKILL → 重启那几秒 nginx 502。
+    # memswap 给 2g 让极端峰值借 swap 而非被杀。已 docker update 热生效，此行仅持久化防下次 compose up 回退。
+    mem_limit: 768m
+    memswap_limit: 2g
+    logging: *default-logging
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    env_file: [.env]
+    environment:
+      # 容器内必须用服务名访问依赖，覆盖 .env 里可能的 localhost
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-dramaforge}
+      REDIS_URL: redis://redis:6379
+      MINIO_ENDPOINT: minio
+      NODE_ENV: production
+      PG_POOL_MAX: "10"
+    ports:
+      - "127.0.0.1:${WEB_PORT:-3000}:3000"
+    healthcheck:
+      # /api/health 被 middleware 豁免（任何 UA 可访问），专供容器健康检查
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/api/health >/dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+    networks: [dramaforge_net]
+
+  # ---------------------------------------------------------------------------
+  # AI Worker — 纯 AI BullMQ 消费者 (⑥ packages/server/src/ai-worker)
+  # 镜像本地 build (packages/server/Dockerfile)，CMD = node dist/ai-worker/index.js。
+  # 消费 ④ task 派发的 BullMQ 队列 (text/image/video/voice)，纯 AI 任务，无 ffmpeg。
+  # ---------------------------------------------------------------------------
+  ai-worker:
+    image: dramaforge-cs-ai-worker:${TAG:-latest}
+    container_name: dramaforge-ai-worker
+    restart: unless-stopped
+    mem_limit: 256m
+    memswap_limit: 512m
+    logging: *default-logging
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    env_file: [.env]
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-dramaforge}
+      REDIS_URL: redis://redis:6379
+      MINIO_ENDPOINT: minio
+      NODE_ENV: production
+      PG_POOL_MAX: "5"
+      # 共享保守默认值；图片是 URL 直返的远程 I/O，单独提高到 4 消化批量资产。
+      # 视频默认 6 = ark key 池容量（2 把 × maxConcurrent 3），让 job 在 BullMQ 排队
+      # 而非在 pick() 干等；可被服务器 .env 的 WORKER_VIDEO_CONCURRENCY 覆盖。
+      # 铁律：此值 ≤ Σ(每 key maxConcurrent)，否则多出来的会卡 pick() 有界等待。
+      WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-1}
+      WORKER_IMAGE_CONCURRENCY: ${WORKER_IMAGE_CONCURRENCY:-4}
+      WORKER_VIDEO_CONCURRENCY: ${WORKER_VIDEO_CONCURRENCY:-6}
+    command: ["node", "dist/ai-worker/index.js"]
+    networks: [dramaforge_net]
+
+# =============================================================================
+# 网络 — 单一 internal bridge，所有服务共用
+# =============================================================================
+networks:
+  dramaforge_net:
+    driver: bridge
+    name: dramaforge_net
+
+# =============================================================================
+# 持久化卷 — pg 数据 + redis AOF + minio 对象
+# =============================================================================
+volumes:
+  pg_data:
+    name: dramaforge_pg_data
+  redis_data:
+    name: dramaforge_redis_data
+  minio_data:
+    name: dramaforge_minio_data

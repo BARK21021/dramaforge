@@ -1,0 +1,89 @@
+# DramaForge Local — standalone offline build config
+#
+# Architecture:
+#   - Fastify local-server (dist/index.cjs) → resources/local-server/
+#   - Next.js standalone server (.next/standalone) → resources/web-standalone/
+#   - better-sqlite3 native → node_modules
+#   - ffmpeg → resources/ffmpeg/
+#
+# Build:
+#   pnpm --filter @dramaforge/web build:standalone
+#   pnpm --filter @dramaforge/local-server build
+#   pnpm --filter @dramaforge/client build:main
+#   cd packages/client && pnpm package:local
+
+appId: com.dramaforge.local
+productName: DramaForge Local
+copyright: Copyright (c) 2026 DramaForge
+
+directories:
+  output: release-local
+  buildResources: build
+
+artifactName: "DramaForge-Local-Setup-${version}-${arch}.${ext}"
+
+npmRebuild: true
+
+files:
+  - dist-main/**/*
+  - package.json
+  - node_modules/bytenode/**/*
+  - node_modules/@ffmpeg-installer/ffmpeg/**/*
+  - node_modules/@ffmpeg-installer/win32-x64/**/*
+  - node_modules/sharp/**/*
+  - node_modules/@img/sharp-win32-x64/**/*
+  - node_modules/fluent-ffmpeg/**/*
+  - node_modules/better-sqlite3/**/*
+  - node_modules/bindings/**/*
+  - node_modules/file-uri-to-path/**/*
+  - node_modules/@dramaforge/shared/**/*
+  - node_modules/@dramaforge/local-server/**/*
+  - node_modules/fastify/**/*
+  - node_modules/@fastify/cookie/**/*
+  - node_modules/@fastify/static/**/*
+  - node_modules/bcryptjs/**/*
+  - node_modules/jsonwebtoken/**/*
+  - "!**/test/**"
+  - "!**/*.test.ts"
+  - "!**/*.test.js"
+
+extraResources:
+  # ffmpeg binary
+  - from: node_modules/@ffmpeg-installer/win32-x64/ffmpeg.exe
+    to: ffmpeg/ffmpeg.exe
+    filter: ["**/*"]
+  # Voice library
+  - from: resources/voices
+    to: voices
+    filter: ["**/*"]
+  # 深度图推理脚本 gen_depth.py（随客户端打包）
+  - from: resources/scripts
+    to: scripts
+    filter: ["**/*"]
+  # Python 推理环境 + 模型权重（压缩包，首次运行自动解压）
+  # 不展开打包避免 NSIS 7z solid 压缩 mmap 上限（~4GB）。
+  - from: C:/Users/<user>/refvideo-work/python-env.tar.gz
+    to: bundles/python-env.tar.gz
+    filter: ["**/*"]
+  - from: C:/Users/<user>/refvideo-work/depth-models.tar.gz
+    to: bundles/depth-models.tar.gz
+    filter: ["**/*"]
+  # Fastify local-server bundle
+  - from: ../local-server/dist/index.cjs
+    to: local-server/index.cjs
+    filter: ["**/*"]
+  - from: ../local-server/src/db/schema.sql
+    to: local-server/schema.sql
+    filter: ["**/*"]
+  # Next.js standalone server (self-contained: server.js + minimal node_modules + .next)
+  - from: ../web/.next/standalone
+    to: web-standalone
+    filter: ["**/*"]
+
+# NSIS mmap limit (~4GB on 32-bit) is exceeded by the 3.6GB depth-env bundles.
+# Use "dir" target for local build — produces an unpacked folder the user runs directly.
+win:
+  target:
+    - target: dir
+      arch: [x64]
+  icon: build/icon.png

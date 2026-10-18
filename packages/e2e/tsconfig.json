@@ -1,0 +1,16 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@client/*": ["../client/src/*"],
+      "@shared/*": ["../shared/src/*"],
+      "@server/*": ["../server/src/*"],
+      "@dramaforge/shared": ["../shared/src/index.ts"],
+      "@dramaforge/client": ["../client/src/index.ts"],
+      "@dramaforge/client/*": ["../client/src/*"]
+    },
+    "types": ["node"]
+  },
+  "include": ["src/**/*.ts"]
+}

@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="720" viewBox="0 0 1240 720" font-family='"Microsoft YaHei","PingFang SC","Noto Sans CJK SC","Source Han Sans SC",sans-serif'>
+<title>DramaForge 架构与数据边界</title>
+<defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#9ca3af"/></marker></defs>
+<rect width="1240" height="720" fill="#ffffff"/>
+<text x="40" y="48" font-size="24" font-weight="700" fill="#111827" text-anchor="start">薄服务端 / 厚客户端：数据边界在哪</text>
+<text x="40" y="76" font-size="13" font-weight="400" fill="#6b7280" text-anchor="start">服务器只持 AI key 和数据库元数据，零媒体字节；渲染所需素材与成品全在用户本地。一台 1.8 GB 内存的单机即可跑起整套服务。</text>
+<rect x="40" y="108" width="540" height="300" rx="12" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="1"/>
+<text x="60" y="136" font-size="15" font-weight="700" fill="#166534" text-anchor="start">客户端（Electron）</text>
+<text x="60" y="156" font-size="11" font-weight="400" fill="#15803d" text-anchor="start">所有重活：解码、渲染、合成、体积收敛</text>
+<rect x="60" y="174" width="500" height="46" rx="8" fill="#ffffff" stroke="#bbf7d0" stroke-width="1"/>
+<text x="74" y="194" font-size="12.5" font-weight="700" fill="#111827" text-anchor="start">ffmpeg</text>
+<text x="74" y="210" font-size="10.5" font-weight="400" fill="#6b7280" text-anchor="start">剪辑、拼接、音轨、封面 remux</text>
+<rect x="60" y="230" width="500" height="46" rx="8" fill="#ffffff" stroke="#bbf7d0" stroke-width="1"/>
+<text x="74" y="250" font-size="12.5" font-weight="700" fill="#111827" text-anchor="start">sharp</text>
+<text x="74" y="266" font-size="10.5" font-weight="400" fill="#6b7280" text-anchor="start">图片缩放、格式与体积收敛</text>
+<rect x="60" y="286" width="500" height="46" rx="8" fill="#ffffff" stroke="#bbf7d0" stroke-width="1"/>
+<text x="74" y="306" font-size="12.5" font-weight="700" fill="#111827" text-anchor="start">人脸网格</text>
+<text x="74" y="322" font-size="10.5" font-weight="400" fill="#6b7280" text-anchor="start">OpenCV DNN + Haar，规避参考图被判真人</text>
+<rect x="60" y="342" width="500" height="46" rx="8" fill="#ffffff" stroke="#bbf7d0" stroke-width="1"/>
+<text x="74" y="362" font-size="12.5" font-weight="700" fill="#111827" text-anchor="start">素材库</text>
+<text x="74" y="378" font-size="10.5" font-weight="400" fill="#6b7280" text-anchor="start">视频 / 图片 / 音频全部落本地磁盘</text>
+<rect x="660" y="108" width="540" height="300" rx="12" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1"/>
+<text x="680" y="136" font-size="15" font-weight="700" fill="#1e40af" text-anchor="start">云端（Docker Compose）</text>
+<text x="680" y="156" font-size="11" font-weight="400" fill="#1d4ed8" text-anchor="start">只做编排与计费，不碰媒体字节</text>
+<rect x="680" y="174" width="500" height="46" rx="8" fill="#ffffff" stroke="#bfdbfe" stroke-width="1"/>
+<text x="694" y="194" font-size="12.5" font-weight="700" fill="#111827" text-anchor="start">web</text>
+<text x="694" y="210" font-size="10.5" font-weight="400" fill="#6b7280" text-anchor="start">Next.js 16 / React 19，页面与 API 路由</text>
+<rect x="680" y="230" width="500" height="46" rx="8" fill="#ffffff" stroke="#bfdbfe" stroke-width="1"/>
+<text x="694" y="250" font-size="12.5" font-weight="700" fill="#111827" text-anchor="start">server</text>
+<text x="694" y="266" font-size="10.5" font-weight="400" fill="#6b7280" text-anchor="start">domain 业务 · gateway 供应商 · task 队列</text>
+<rect x="680" y="286" width="500" height="46" rx="8" fill="#ffffff" stroke="#bfdbfe" stroke-width="1"/>
+<text x="694" y="306" font-size="12.5" font-weight="700" fill="#111827" text-anchor="start">ai-worker</text>
+<text x="694" y="322" font-size="10.5" font-weight="400" fill="#6b7280" text-anchor="start">BullMQ 消费：text / image / video / voice</text>
+<rect x="680" y="342" width="500" height="46" rx="8" fill="#ffffff" stroke="#bfdbfe" stroke-width="1"/>
+<text x="694" y="362" font-size="12.5" font-weight="700" fill="#111827" text-anchor="start">PostgreSQL · Redis · MinIO</text>
+<text x="694" y="378" font-size="10.5" font-weight="400" fill="#6b7280" text-anchor="start">元数据、队列、表单类存储</text>
+<line x1="580" y1="200" x2="660" y2="200" stroke="#94a3b8" stroke-width="1.6"/>
+<line x1="660" y1="230" x2="580" y2="230" stroke="#94a3b8" stroke-width="1.6"/>
+<text x="620" y="190" font-size="10" font-weight="700" fill="#6b7280" text-anchor="middle">任务派发</text>
+<text x="620" y="250" font-size="10" font-weight="700" fill="#6b7280" text-anchor="middle">状态回传</text>
+<rect x="572" y="300" width="96" height="88" rx="6" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
+<text x="620" y="328" font-size="20" font-weight="700" fill="#dc2626" text-anchor="middle">0</text>
+<text x="620" y="352" font-size="9.5" font-weight="400" fill="#6b7280" text-anchor="middle">媒体字节</text>
+<text x="620" y="368" font-size="9.5" font-weight="400" fill="#6b7280" text-anchor="middle">零上行</text>
+<rect x="40" y="452" width="372" height="116" rx="8" fill="#f9fafb" stroke="#e5e7eb" stroke-width="1"/>
+<text x="56" y="476" font-size="12.5" font-weight="700" fill="#111827" text-anchor="start">AI key 只在云端</text>
+<text x="56" y="500" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">客户端全量 grep 零 key。本地无 BYOK，所以本地无法真生成——</text>
+<text x="56" y="519" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">这是设计，不是缺陷。</text>
+<rect x="440" y="452" width="372" height="116" rx="8" fill="#f9fafb" stroke="#e5e7eb" stroke-width="1"/>
+<text x="456" y="476" font-size="12.5" font-weight="700" fill="#111827" text-anchor="start">媒体默认落本地</text>
+<text x="456" y="500" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">链路已对齐；单镜头图片/视频的持久化仍是迁移遗留债，</text>
+<text x="456" y="519" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">代码里有明确标记，新代码由 hook 拦住。</text>
+<rect x="840" y="452" width="372" height="116" rx="8" fill="#f9fafb" stroke="#e5e7eb" stroke-width="1"/>
+<text x="856" y="476" font-size="12.5" font-weight="700" fill="#111827" text-anchor="start">前端照搬既有产品</text>
+<text x="856" y="500" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">流程级一一对应，不自创交互；视觉对齐靠纪律而非机械拦截。</text>
+<rect x="40" y="606" width="1160" height="72" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+<text x="60" y="632" font-size="12.5" font-weight="700" fill="#111827" text-anchor="start">Gateway 出口（8 个适配器，统一入口 callAI(model, payload, cred, ctx)）</text>
+<text x="60" y="656" font-size="11.5" font-weight="400" fill="#6b7280" text-anchor="start">ARK Seedance · OpenAI · Google Gemini · DeepSeek · Kimi · MiniMax · 自建 ComfyUI</text>
+</svg>

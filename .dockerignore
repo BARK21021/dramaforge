@@ -1,0 +1,52 @@
+# 通用排除
+node_modules
+**/node_modules
+.git
+.gitignore
+.env
+.env.local
+.env.*.local
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# 构建产物
+**/dist
+**/.next
+# 隔离验收构建使用 .next-verify-*，同样不能进入 Docker context。
+**/.next-*
+**/out
+**/dist-main
+**/dist-electron
+*.tsbuildinfo
+
+# 测试 / 覆盖率
+**/coverage
+**/.nyc_output
+
+# 打包产物
+*.tar.gz
+*.tar
+*.zip
+*.enc
+
+# Electron 桌面端本地依赖（云端 Docker 不需要）
+**/electron
+**/.redis
+# 云端只需要客户端 package.json 解析 workspace；安装包与 Electron 源码不进入镜像上下文。
+packages/client/**
+!packages/client/package.json
+
+# IDE / 文档 / 杂项
+.vscode
+.idea
+.trae
+docs
+**/*.md
+WORKLOG.md
+
+# 机器特定文件
+fix-path.ps1
+.path-backup-*
+.path-fix-result.txt
+VPN Proxy.txt

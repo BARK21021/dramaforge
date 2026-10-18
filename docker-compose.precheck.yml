@@ -1,0 +1,168 @@
+# =============================================================================
+# DramaForge — 本地部署前验收栈 (docker-compose.precheck.yml)
+# =============================================================================
+# 自包含、隔离的验收栈：与 docker-compose.yml 【完全独立，不复用 base】。
+# 原因：base 的 container_name(dramaforge-*)/命名卷(dramaforge_*)/web 端口(3000) 全固定，
+# 本地再起一套会和本地 dev 栈或别的副本撞名/撞卷/撞端口。本文件全部 precheck-
+# 前缀 + project=dramaforge-precheck + web 绑 13099，互不干扰。
+#
+# 关键：跑的是【本地 build 的同一批生产镜像】dramaforge-cs-{web,ai-worker}:${TAG}
+# （与生产用同一 Dockerfile），故"验过的镜像"就是"要推云端的镜像"，无漂移。
+#
+# 与生产的刻意差异（验收场景）：
+#   - 不设 mem_limit：本地机内存 ≠ 生产 1.8GB，验收只验 build/迁移/boot/路由/崩溃，
+#     不复现负载级 OOM（那是生产压测范畴）。OOM 见续57 的 502 事故。
+#   - pg/redis/minio 不暴露端口：验收只需 web 的 /api/health + 路由冒烟。
+#   - env_file: [.env] 复用本地 .env（基建变量真值；AI key 空——env() 不校验 AI key，
+#     见 packages/server/src/infra/env.ts，故空 key 不影响 boot）。
+#   - SMS_MOCK_ENABLED 强制置空：NODE_ENV=production 下 env() 会拒绝 SMS mock（防刷号），
+#     本地 .env 若误开 mock 会让 precheck 假阴性，故在此中和。
+#
+# 由 scripts/precheck.sh 驱动：起基建→跑 migrate→起 web/worker→冒烟→down -v。
+# 绝不部署：deploy.sh 只传输 dramaforge-cs-web/ai-worker 镜像，不碰本文件。
+# =============================================================================
+
+x-logging: &precheck-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: dramaforge-precheck-postgres
+    restart: "no"
+    logging: *precheck-logging
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-dramaforge}
+      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+    volumes:
+      - pg_data_precheck:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+    networks: [precheck_net]
+
+  redis:
+    image: redis:7-alpine
+    container_name: dramaforge-precheck-redis
+    restart: "no"
+    logging: *precheck-logging
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "64mb", "--maxmemory-policy", "noeviction"]
+    volumes:
+      - redis_data_precheck:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "PING"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 5s
+    networks: [precheck_net]
+
+  minio:
+    image: minio/minio:latest
+    container_name: dramaforge-precheck-minio
+    restart: "no"
+    logging: *precheck-logging
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:?MINIO_ACCESS_KEY must be set in .env}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:?MINIO_SECRET_KEY must be set in .env}
+    command: ["server", "/data", "--console-address", ":9001"]
+    volumes:
+      - minio_data_precheck:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+    networks: [precheck_net]
+
+  # 一次性迁移（profile 隔离，仅 --profile migrate run 时跑 dist/migrate.js）
+  migrate:
+    image: dramaforge-cs-ai-worker:${TAG:-precheck}
+    container_name: dramaforge-precheck-migrate
+    restart: "no"
+    logging: *precheck-logging
+    profiles: ["migrate"]
+    depends_on:
+      postgres: { condition: service_healthy }
+    env_file: [.env]
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-dramaforge}
+      REDIS_URL: redis://redis:6379
+      MINIO_ENDPOINT: minio
+      NODE_ENV: production
+      SMS_MOCK_ENABLED: ""
+    command: ["node", "dist/migrate.js"]
+    networks: [precheck_net]
+
+  web:
+    image: dramaforge-cs-web:${TAG:-precheck}
+    container_name: dramaforge-precheck-web
+    restart: "no"
+    logging: *precheck-logging
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      minio: { condition: service_healthy }
+    env_file: [.env]
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-dramaforge}
+      REDIS_URL: redis://redis:6379
+      MINIO_ENDPOINT: minio
+      NODE_ENV: production
+      SMS_MOCK_ENABLED: ""
+      PG_POOL_MAX: "5"
+    ports:
+      - "127.0.0.1:${PRECHECK_WEB_PORT:-13099}:3000"
+    healthcheck:
+      # /api/health 被 middleware 豁免，专供健康检查
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/api/health >/dev/null 2>&1 || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+    networks: [precheck_net]
+
+  ai-worker:
+    image: dramaforge-cs-ai-worker:${TAG:-precheck}
+    container_name: dramaforge-precheck-ai-worker
+    restart: "no"
+    logging: *precheck-logging
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      minio: { condition: service_healthy }
+    env_file: [.env]
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-dramaforge}
+      REDIS_URL: redis://redis:6379
+      MINIO_ENDPOINT: minio
+      NODE_ENV: production
+      SMS_MOCK_ENABLED: ""
+      PG_POOL_MAX: "3"
+      WORKER_CONCURRENCY: "1"
+      WORKER_IMAGE_CONCURRENCY: "1"
+      WORKER_VIDEO_CONCURRENCY: "1"
+    command: ["node", "dist/ai-worker/index.js"]
+    networks: [precheck_net]
+
+networks:
+  precheck_net:
+    driver: bridge
+    name: dramaforge_precheck_net
+
+volumes:
+  pg_data_precheck:
+    name: dramaforge_pg_data_precheck
+  redis_data_precheck:
+    name: dramaforge_redis_data_precheck
+  minio_data_precheck:
+    name: dramaforge_minio_data_precheck

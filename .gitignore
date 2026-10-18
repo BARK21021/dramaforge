@@ -1,0 +1,70 @@
+# deps
+node_modules/
+.pnp
+.pnp.js
+
+# build
+.next/
+# 本地并行/隔离验收构建目录。
+.next-*/
+out/
+dist/
+dist-main/
+dist-electron/
+release/
+.next/standalone/
+*.tsbuildinfo
+
+# env
+.env
+.env.local
+.env.*.local
+
+# local dev compose override (exposes DB/Redis/MinIO ports — never deploy)
+docker-compose.override.yml
+
+# logs
+*.log
+npm-debug.log*
+/logs/
+!docs/
+
+# os
+.DS_Store
+Thumbs.db
+
+# editor
+.vscode/
+.idea/
+
+# test
+coverage/
+
+# local artifacts
+*.tar.gz
+*.enc
+# app1 data migration dump (real user passwordHash + API keys — never commit)
+scripts/app1-data.*
+
+# local personal files (not part of refactor, machine-specific)
+archive/
+/VPN Proxy.txt
+/新建 文本文档.txt
+
+# path-fix artifacts (machine-specific, not refactor)
+/fix-path.ps1
+/.path-backup-machine.txt
+/.path-backup-user.txt
+/.path-fix-result.txt
+.playwright-mcp/
+
+.codex/
+*.png
+*.jpeg
+
+# local test data (hand-test leftovers, code uses STARFRAME_DATA_DIR / ~/.dramaforge-local)
+test-local-data/
+
+# OpenCV DNN face model (~10MB binary). gen_face_grid.py auto-downloads it when missing.
+packages/client/resources/face-models/*.caffemodel
+
